@@ -31,7 +31,9 @@ public class MobileNumberPlugin implements MethodCallHandler, RequestPermissions
      */
     public static void registerWith(Registrar registrar) {
         final MethodChannel channel = new MethodChannel(registrar.messenger(), "mobile_number");
-        channel.setMethodCallHandler(new MobileNumberPlugin());
+        MobileNumberPlugin mobileNumberPlugin=new MobileNumberPlugin();
+        channel.setMethodCallHandler(mobileNumberPlugin);
+        registrar.addRequestPermissionsResultListener(mobileNumberPlugin);
         MobileNumberPlugin.registrar = registrar;
     }
 
@@ -77,15 +79,21 @@ public class MobileNumberPlugin implements MethodCallHandler, RequestPermissions
 
     private void generateMobileNumber() {
         String countryIso = telephonyManager.getSimCountryIso();
-        String countryPhoneCode = CountryToPhonePrefix.prefixFor(countryIso);
-        @SuppressLint("HardwareIds") String line1Number = telephonyManager.getLine1Number();
-        if (line1Number.startsWith("0"))
-            line1Number = line1Number.substring(1);
-        String mobileNumber = countryPhoneCode + line1Number;
-        if (line1Number.isEmpty()) {
-            mobileNumber = "";
+
+        try {
+            @SuppressLint({"HardwareIds", "MissingPermission"}) String line1Number = telephonyManager.getLine1Number();
+            if (line1Number.length()>9)
+                line1Number = line1Number.substring(line1Number.length() - 9);
+            String mobileNumber = line1Number;
+            if (line1Number.isEmpty()) {
+                mobileNumber = "";
+                result.error("UNAVAILABLE", "No phone number on sim card", null);
+            } else result.success(mobileNumber.replaceAll("\\+", ""));
+        }catch (Exception ex){
             result.error("UNAVAILABLE", "No phone number on sim card", null);
-        } else result.success(mobileNumber.replaceAll("\\+", ""));
+            ex.printStackTrace();
+        }
+
     }
 
     @Override
@@ -97,8 +105,9 @@ public class MobileNumberPlugin implements MethodCallHandler, RequestPermissions
         if (requestCode == MY_PERMISSIONS_REQUEST_READ_PHONE_STATE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 generateMobileNumber();
-                return true;
+
             }
+            return true;
         }
         result.error("PERMISSION", "onRequestPermissionsResult is not granted", null);
         return false;
