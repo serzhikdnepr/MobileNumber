@@ -77,8 +77,7 @@ public class MobileNumberPlugin implements MethodCallHandler, RequestPermissions
         }
     }
 
-    private void generateMobileNumber() {
-        String countryIso = telephonyManager.getSimCountryIso();
+    private void generateMobileNumber() {    
 
         try {
             @SuppressLint({"HardwareIds", "MissingPermission"}) String line1Number = telephonyManager.getLine1Number();
